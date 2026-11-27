@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="web_dashboard" name="shell-type">
+  <title>ClassNote AI — Lecture Recording Studio</title>
+
+  <!-- Prevent FOUC -->
+  <script>
+    (function() {
+      try {
+        const stored = localStorage.getItem('classnote_global_theme') || localStorage.getItem('classnote_theme');
+        if (stored === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        } else if (stored === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+        } else {
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (prefersDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            heading: ["Plus Jakarta Sans", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Shared Design System -->
+  <link rel="stylesheet" href="../shared-theme/theme.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../shared-theme/theme.js"></script>
+
+  <style>
+    .transcript-interim {
+      margin: 8px 0;
+      padding: 10px 14px;
+      border-radius: var(--cn-radius-md);
+      background: var(--cn-accent-soft);
+      color: var(--cn-accent);
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px dashed var(--cn-border-focus);
+    }
+    .transcript-empty {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--cn-text-muted);
+      font-size: 14px;
+    }
+    .mic-error { color: var(--cn-danger) !important; }
+    .mic-active { color: var(--cn-success) !important; }
+    #transcript-feed::-webkit-scrollbar { width: 6px; }
+    #transcript-feed::-webkit-scrollbar-track { background: transparent; }
+    #transcript-feed::-webkit-scrollbar-thumb { background: var(--cn-border); border-radius: 4px; }
+  </style>
+
+  <script>
+    // Protect page with Supabase Auth Guard
+    document.documentElement.style.visibility = 'hidden';
+    document.addEventListener('DOMContentLoaded', () => {
+      window.ClassNoteAuth.protectPage({
+        onAuthenticated: ({ profile }) => {
+          window.__currentTeacherProfile = profile;
+        }
+      });
+    });
+  </script>
+</head>
+
+<body class="bg-background font-sans antialiased text-slate-800 dark:text-slate-100 min-h-screen flex flex-col">
+  <!-- Top Navigation Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 h-16 cn-header bg-white/90 dark:bg-[#0e1422]/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 transition-colors">
+    <div class="w-full h-full px-4 sm:px-8 flex items-center justify-between gap-4">
+      
+      <!-- Brand -->
+      <div class="flex items-center gap-3 min-w-[240px]">
+        <a class="flex items-center gap-3 group focus:outline-none" href="../teacher_dashboard_classnote_ai/code.html">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/25 transition-transform duration-200 group-hover:scale-105">
+            <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+          </div>
+          <span class="font-heading text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+            ClassNote <span class="text-indigo-600 dark:text-indigo-400">AI</span>
+          </span>
+        </a>
+        <div class="hidden lg:flex items-center ml-2 pl-3 border-l border-slate-200 dark:border-slate-800">
+          <span class="cn-badge cn-badge-danger flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            LIVE RECORDING
+          </span>
+        </div>
+      </div>
+
+      <!-- Action Items & Teacher Identity -->
+      <div class="flex items-center gap-3">
+        <!-- Theme Toggle Button -->
+        <button id="theme-toggle-btn" class="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#131a2b] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white hover:border-indigo-500/40 transition-all cursor-pointer" title="Toggle dark or light mode" type="button" onclick="window.toggleClassNoteTheme()">
+          <span class="material-symbols-outlined text-[19px]">light_mode</span>
+        </button>
+
+        <!-- Teacher Profile Display -->
+        <div class="flex items-center gap-3 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
+          <div class="hidden sm:flex flex-col text-right">
+            <span class="font-heading text-xs font-bold text-slate-900 dark:text-white leading-tight" data-teacher-name>Faculty Member</span>
+            <span class="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-medium" data-teacher-department>Teacher Workspace</span>
+          </div>
+
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-indigo-500/20">
+            <span data-teacher-initial>T</span>
+          </div>
+
+          <button id="logout-btn" class="flex items-center justify-center w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-500/15 transition-colors cursor-pointer" type="button" title="Sign out" aria-label="Sign out">
+            <span class="material-symbols-outlined text-[19px]">logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Left Sidebar Navigation -->
+  <aside class="fixed left-0 top-16 bottom-0 w-64 cn-sidebar bg-white dark:bg-[#0e1422] border-r border-slate-200 dark:border-slate-800 z-40 flex flex-col justify-between overflow-y-auto hidden md:flex transition-colors">
+    <div class="p-4 space-y-6">
+      <div>
+        <div class="font-mono text-[10px] font-semibold tracking-wider uppercase text-slate-400 dark:text-slate-500 px-3 mb-2">Navigation</div>
+        <nav class="space-y-1">
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#131a2b] font-heading text-sm font-medium transition-colors" href="../teacher_dashboard_classnote_ai/code.html">
+            <span class="material-symbols-outlined text-[20px]">grid_view</span>
+            <span>Dashboard</span>
+          </a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-heading text-sm font-semibold border border-indigo-200/50 dark:border-indigo-500/20" href="../new_lecture_academic_selection_classnote_ai/code.html">
+            <span class="material-symbols-outlined text-[20px]">fiber_manual_record</span>
+            <span>New Lecture</span>
+          </a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#131a2b] font-heading text-sm font-medium transition-colors" href="../delivery_confirmation_classnote_ai/code.html">
+            <span class="material-symbols-outlined text-[20px]">mark_email_read</span>
+            <span>Delivery Status</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Cohort Details in Sidebar -->
+      <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-[#131a2b] border border-slate-200 dark:border-slate-800 space-y-2">
+        <span class="font-mono text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Target Cohort</span>
+        <div id="sidebar-cohort-name" class="font-heading text-xs font-bold text-slate-900 dark:text-white">AI & Machine Learning</div>
+        <div id="sidebar-batches-count" class="text-[11px] text-slate-500">Selected Batches Enrolled</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="md:pl-64 flex flex-col flex-1">
+    <main class="w-full pt-20 px-4 sm:px-8 py-6 flex-1 max-w-[1500px] mx-auto space-y-6">
+
+      <!-- TOP LECTURE TITLE BANNER -->
+      <section class="cn-card p-6 sm:p-7 rounded-2xl relative overflow-hidden">
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-2">
+            <span class="cn-badge cn-badge-primary">STEP 2 OF 4: RECORDING STUDIO</span>
+            <span class="text-slate-400 dark:text-slate-600">•</span>
+            <span id="lecture-meta-badges" class="font-mono text-xs text-slate-500 dark:text-slate-400">Loading lecture metadata...</span>
+          </div>
+          <h1 id="studio-lecture-title" class="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Preparing lecture…
+          </h1>
+        </div>
+      </section>
+
+      <!-- PRIMARY RECORDING CONTROL BAR -->
+      <section class="cn-card p-5 sm:p-6 rounded-2xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-6">
+        
+        <!-- Elapsed Timer -->
+        <div class="flex items-center gap-4">
+          <div class="px-5 py-3 rounded-xl bg-slate-100 dark:bg-[#0b101c] border border-slate-200 dark:border-slate-800 flex items-center gap-3 shadow-inner">
+            <span class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></span>
+            <!-- TIMER ELEMENT WITH ZERO BUG FIXED -->
+            <span id="recording-timer" class="font-mono text-3xl font-bold tracking-wider text-slate-900 dark:text-white">00:00:00</span>
+            <span class="font-mono text-xs text-slate-400 font-semibold">REC</span>
+          </div>
+        </div>
+
+        <!-- Waveform Visualization -->
+        <div class="flex-1 max-w-xl flex flex-col justify-center space-y-1.5">
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span id="mic-status" class="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-semibold">
+              <span class="material-symbols-outlined text-[15px]">mic</span>
+              INITIALIZING MICROPHONE…
+            </span>
+            <span class="text-slate-400">16kHz PCM Int16 Audio</span>
+          </div>
+
+          <!-- Dynamic Audio Bars -->
+          <div id="audio-waveform" class="h-10 w-full bg-slate-100 dark:bg-[#0b101c] border border-slate-200 dark:border-slate-800 rounded-xl px-3 flex items-center justify-between gap-1 overflow-hidden shadow-inner">
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-3 animate-pulse"></div>
+            <div class="wave-bar w-1.5 bg-violet-500 rounded-full h-5 animate-pulse" style="animation-delay: 50ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-7 animate-pulse" style="animation-delay: 100ms"></div>
+            <div class="wave-bar w-1.5 bg-cyan-500 rounded-full h-4 animate-pulse" style="animation-delay: 150ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-8 animate-pulse" style="animation-delay: 200ms"></div>
+            <div class="wave-bar w-1.5 bg-violet-500 rounded-full h-6 animate-pulse" style="animation-delay: 250ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-9 animate-pulse" style="animation-delay: 80ms"></div>
+            <div class="wave-bar w-1.5 bg-cyan-500 rounded-full h-4 animate-pulse" style="animation-delay: 180ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-8 animate-pulse" style="animation-delay: 120ms"></div>
+            <div class="wave-bar w-1.5 bg-violet-500 rounded-full h-5 animate-pulse" style="animation-delay: 220ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-7 animate-pulse" style="animation-delay: 90ms"></div>
+            <div class="wave-bar w-1.5 bg-cyan-500 rounded-full h-3 animate-pulse" style="animation-delay: 160ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-8 animate-pulse" style="animation-delay: 70ms"></div>
+            <div class="wave-bar w-1.5 bg-violet-500 rounded-full h-6 animate-pulse" style="animation-delay: 140ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-5 animate-pulse" style="animation-delay: 190ms"></div>
+            <div class="wave-bar w-1.5 bg-cyan-500 rounded-full h-7 animate-pulse" style="animation-delay: 110ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-4 animate-pulse" style="animation-delay: 240ms"></div>
+            <div class="wave-bar w-1.5 bg-violet-500 rounded-full h-8 animate-pulse" style="animation-delay: 60ms"></div>
+            <div class="wave-bar w-1.5 bg-indigo-500 rounded-full h-6 animate-pulse" style="animation-delay: 130ms"></div>
+            <div class="wave-bar w-1.5 bg-cyan-500 rounded-full h-3 animate-pulse" style="animation-delay: 170ms"></div>
+          </div>
+        </div>
+
+        <!-- Action Controls -->
+        <div class="flex items-center gap-3 flex-wrap justify-end">
+          <button id="btn-pause" class="cn-btn text-xs py-2.5 px-4" type="button" title="Pause recording">
+            <span class="material-symbols-outlined text-[18px]">pause</span>
+            <span>Pause</span>
+          </button>
+
+          <button id="btn-resume" class="cn-btn cn-btn-secondary text-xs py-2.5 px-4 hidden" type="button" title="Resume recording">
+            <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+            <span>Resume</span>
+          </button>
+
+          <button id="btn-stop" class="cn-btn cn-btn-danger text-xs py-2.5 px-5 font-bold shadow-md shadow-rose-500/20" type="button">
+            <span class="material-symbols-outlined text-[18px]">stop_circle</span>
+            <span>Stop & Generate Lecture Notes</span>
+          </button>
+        </div>
+
+      </section>
+
+      <!-- LIVE TRANSCRIPTION FEED -->
+      <section class="cn-card rounded-2xl overflow-hidden flex flex-col shadow-sm">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#131a2b]/70">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[20px]">subject</span>
+            </div>
+            <div>
+              <h2 class="font-heading text-sm font-bold text-slate-900 dark:text-white">Live Speech-to-Text Stream</h2>
+              <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Transcribing continuously in real-time
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btn-copy-transcript" class="cn-btn text-xs py-1.5 px-3" type="button" title="Copy transcript">
+              <span class="material-symbols-outlined text-[16px]">content_copy</span>
+              <span>Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Transcript Feed Container -->
+        <div id="transcript-feed" class="p-6 flex flex-col gap-3 min-h-[340px] max-h-[560px] overflow-y-auto">
+          <div id="transcript-empty" class="transcript-empty">
+            <span class="material-symbols-outlined text-[36px] text-slate-400 block mb-2">mic</span>
+            Your live transcription will appear here in real-time as you speak...
+          </div>
+        </div>
+
+        <div class="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#0b101c] flex items-center justify-between text-xs text-slate-500 font-mono">
+          <span>Audio Buffer: Streaming directly via WebSocket (Zero disk persistence)</span>
+          <span class="text-indigo-600 dark:text-indigo-400 font-semibold">Powered by Gemini & Whisper</span>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script id="recording-studio-runtime">
+    (function initRecordingStudio() {
+      const $ = (id) => document.getElementById(id);
+      const titleEl = $('studio-lecture-title');
+      const timerEl = $('recording-timer');
+      const micStatus = $('mic-status');
+      const feed = $('transcript-feed');
+      const emptyState = $('transcript-empty');
+      const btnPause = $('btn-pause');
+      const btnResume = $('btn-resume');
+      const btnStop = $('btn-stop');
+      const bars = Array.from(document.querySelectorAll('#audio-waveform .wave-bar'));
+
+      let seconds = 0;
+      let isPaused = false;
+      let isStopped = false;
+      let mediaStream = null;
+      let audioContext = null;
+      let analyser = null;
+      let animationFrame = null;
+      let timerInterval = null;
+      let socket = null;
+      let audioSource = null;
+      let processor = null;
+      let silentGain = null;
+      let socketReady = false;
+      let stopRequested = false;
+      let transcriptParts = [];
+      let interimLine = null;
+
+      // Hydrate lecture parameters from academic selection
+      const lecture = (() => {
+        try { return JSON.parse(sessionStorage.getItem('classnote_current_lecture') || '{}'); }
+        catch (_) { return {}; }
+      })();
+
+      const lectureTitle = (lecture.lectureTitle || '').trim() || 'New Lecture';
+      if (titleEl) titleEl.textContent = lectureTitle;
+      document.title = `${lectureTitle} — Recording Studio | ClassNote AI`;
+
+      // Update sidebar & header metadata
+      const metaBadges = $('lecture-meta-badges');
+      if (metaBadges) {
+        metaBadges.textContent = [lecture.school, lecture.degree, lecture.specialization].filter(Boolean).join(' • ') || 'Academic Session';
+      }
+      const sideCohort = $('sidebar-cohort-name');
+      if (sideCohort && lecture.specialization) sideCohort.textContent = lecture.specialization;
+      const sideBatches = $('sidebar-batches-count');
+      if (sideBatches && lecture.selectedBatches) sideBatches.textContent = `${lecture.selectedBatches.length} batches (${lecture.studentCount || 0} students)`;
+
+      const formatTime = (totalSec) => {
+        const hrs = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+        const secs = String(totalSec % 60).padStart(2, '0');
+        return `${hrs}:${mins}:${secs}`;
+      };
+
+      function setMicStatus(message, state = 'ready') {
+        if (!micStatus) return;
+        micStatus.innerHTML = `<span class="material-symbols-outlined text-[15px]">${state === 'error' ? 'error' : 'mic'}</span><span>${message}</span>`;
+        micStatus.classList.toggle('mic-error', state === 'error');
+        micStatus.classList.toggle('mic-active', state === 'active');
+      }
+
+      function renderTranscript(text, timestamp) {
+        const clean = String(text || '').trim();
+        if (!clean) return;
+        emptyState?.remove();
+
+        const teacherProfile = window.__currentTeacherProfile || JSON.parse(sessionStorage.getItem('classnote_teacher_profile') || '{}');
+        const speakerName = lecture.teacherName || teacherProfile.full_name || 'Faculty Member';
+
+        const article = document.createElement('article');
+        article.className = 'p-3.5 rounded-xl bg-slate-50 dark:bg-[#0b101c] border border-slate-200 dark:border-slate-800 flex items-start gap-3 transition-all';
+
+        const timeBadge = document.createElement('span');
+        timeBadge.className = 'font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0';
+        timeBadge.textContent = formatTime(timestamp);
+
+        const content = document.createElement('div');
+        content.className = 'flex-1 space-y-1 min-w-0';
+
+        const speaker = document.createElement('span');
+        speaker.className = 'font-heading text-xs font-bold text-slate-900 dark:text-white block';
+        speaker.textContent = speakerName;
+
+        const p = document.createElement('p');
+        p.className = 'text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed';
+        p.textContent = clean;
+
+        content.append(speaker, p);
+        article.append(timeBadge, content);
+        feed?.appendChild(article);
+        if (feed) feed.scrollTop = feed.scrollHeight;
+      }
+
+      function appendTranscript(text) {
+        const clean = String(text || '').trim();
+        if (!clean) return;
+        transcriptParts.push({ text: clean, time: seconds });
+        renderTranscript(clean, seconds);
+        if (interimLine) { interimLine.remove(); interimLine = null; }
+      }
+
+      function showInterim(text) {
+        const clean = String(text || '').trim();
+        if (!clean) return;
+        if (!interimLine) {
+          interimLine = document.createElement('div');
+          interimLine.className = 'transcript-interim';
+          feed?.appendChild(interimLine);
+        }
+        interimLine.textContent = `Listening: ${clean}`;
+        if (feed) feed.scrollTop = feed.scrollHeight;
+      }
+
+      // TIMER TICK FUNCTION — PROPERLY UPDATES WITH formatTime(seconds)
+      function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          if (!isPaused && !isStopped) {
+            seconds += 1;
+            if (timerEl) {
+              timerEl.textContent = formatTime(seconds); // Fixed: updates actual elapsed time!
+            }
+          }
+        }, 1000);
+      }
+
+      function startWaveform() {
+        if (!audioContext || !analyser) return;
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        const draw = () => {
+          if (isStopped || isPaused) return;
+          analyser.getByteFrequencyData(data);
+          bars.forEach((bar, index) => {
+            const value = data[Math.floor(index * data.length / Math.max(1, bars.length))] || 0;
+            const height = Math.max(4, Math.min(34, 4 + value * 0.22));
+            bar.style.height = `${height}px`;
+            bar.style.opacity = String(0.45 + Math.min(0.55, value / 255));
+          });
+          animationFrame = requestAnimationFrame(draw);
+        };
+        draw();
+      }
+
+      function stopWaveform() {
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        bars.forEach((bar) => { bar.style.height = '8px'; bar.style.opacity = '.45'; });
+      }
+
+      function downsampleTo16k(float32, inputRate) {
+        if (inputRate === 16000) return float32;
+        const ratio = inputRate / 16000;
+        const outputLength = Math.floor(float32.length / ratio);
+        const output = new Float32Array(outputLength);
+        for (let i = 0; i < outputLength; i++) {
+          const start = Math.floor(i * ratio);
+          const end = Math.min(Math.floor((i + 1) * ratio), float32.length);
+          let sum = 0;
+          for (let j = start; j < end; j++) sum += float32[j];
+          output[i] = sum / Math.max(1, end - start);
+        }
+        return output;
+      }
+
+      function sendPcmChunk(float32) {
+        if (!socket || socket.readyState !== WebSocket.OPEN || !socketReady || isPaused || isStopped) return;
+        const samples = downsampleTo16k(float32, audioContext.sampleRate);
+        const pcm = new Int16Array(samples.length);
+        for (let i = 0; i < samples.length; i++) {
+          const sample = Math.max(-1, Math.min(1, samples[i]));
+          pcm[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+        }
+        const bytes = new Uint8Array(pcm.buffer);
+        let binary = '';
+        const step = 0x8000;
+        for (let i = 0; i < bytes.length; i += step) {
+          binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + step, bytes.length)));
+        }
+        socket.send(JSON.stringify({ type: 'audio', audio: btoa(binary) }));
+      }
+
+      function connectLiveSocket() {
+        return new Promise((resolve, reject) => {
+          socket = new WebSocket('ws://127.0.0.1:8000/live/transcribe');
+          const timeout = setTimeout(() => reject(new Error('Backend WebSocket connection timed out. Check that FastAPI is running on port 8000.')), 15000);
+          
+          socket.onopen = () => console.log('Connected to ClassNote live transcription socket');
+          socket.onmessage = (event) => {
+            let data;
+            try { data = JSON.parse(event.data); } catch (_) { return; }
+            if (data.type === 'ready') {
+              socketReady = true;
+              clearTimeout(timeout);
+              resolve();
+              setMicStatus('GEMINI LIVE ACTIVE • LISTENING', 'active');
+            } else if (data.type === 'interim') {
+              showInterim(data.text);
+            } else if (data.type === 'transcript') {
+              appendTranscript(data.text);
+            } else if (data.type === 'error') {
+              console.error('Transcription error:', data.message);
+              setMicStatus('GATEWAY ERROR: ' + data.message, 'error');
+              if (!socketReady) { clearTimeout(timeout); reject(new Error(data.message)); }
+            }
+          };
+          socket.onerror = () => {
+            clearTimeout(timeout);
+            if (!socketReady) reject(new Error('Could not connect to FastAPI WebSocket on port 8000.'));
+          };
+          socket.onclose = () => {
+            socketReady = false;
+            if (!isStopped && !stopRequested) setMicStatus('SOCKET DISCONNECTED', 'error');
+          };
+        });
+      }
+
+      async function startAudioProcessing() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioContextClass({ sampleRate: 16000 });
+        if (audioContext.state === 'suspended') await audioContext.resume();
+        audioSource = audioContext.createMediaStreamSource(mediaStream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 128;
+        audioSource.connect(analyser);
+
+        processor = audioContext.createScriptProcessor(4096, 1, 1);
+        silentGain = audioContext.createGain();
+        silentGain.gain.value = 0;
+        processor.onaudioprocess = (event) => sendPcmChunk(event.inputBuffer.getChannelData(0));
+        audioSource.connect(processor);
+        processor.connect(silentGain);
+        silentGain.connect(audioContext.destination);
+        startWaveform();
+      }
+
+      async function startRecording() {
+        if (!navigator.mediaDevices?.getUserMedia || !window.WebSocket) {
+          setMicStatus('MICROPHONE NOT SUPPORTED BY BROWSER', 'error');
+          return;
+        }
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+          await connectLiveSocket();
+          await startAudioProcessing();
+          setMicStatus('GEMINI LIVE ACTIVE • LISTENING', 'active');
+          startTimer();
+        } catch (error) {
+          console.error('Recording initialization failed:', error);
+          setMicStatus(`FAILED: ${error.message}`, 'error');
+          mediaStream?.getTracks().forEach(track => track.stop());
+          try { socket?.close(); } catch (_) {}
+        }
+      }
+
+      async function pauseRecording() {
+        if (isStopped || isPaused) return;
+        isPaused = true;
+        stopWaveform();
+        btnPause?.classList.add('hidden');
+        btnResume?.classList.remove('hidden');
+        setMicStatus('RECORDING PAUSED', 'ready');
+      }
+
+      async function resumeRecording() {
+        if (isStopped || !isPaused) return;
+        isPaused = false;
+        if (audioContext?.state === 'suspended') await audioContext.resume();
+        startWaveform();
+        btnResume?.classList.add('hidden');
+        btnPause?.classList.remove('hidden');
+        setMicStatus('GEMINI LIVE ACTIVE • LISTENING', 'active');
+      }
+
+      function getTranscriptText() {
+        return transcriptParts.map(item => `[${formatTime(item.time)}] ${item.text}`).join('\n');
+      }
+
+      async function stopRecording() {
+        if (isStopped) return;
+        const confirmEnd = confirm('Are you sure you want to stop recording and generate academic lecture notes & verified FAQs?');
+        if (!confirmEnd) return;
+
+        isStopped = true;
+        stopRequested = true;
+        clearInterval(timerInterval);
+        stopWaveform();
+
+        if (processor) processor.onaudioprocess = null;
+        try { audioSource?.disconnect(); processor?.disconnect(); silentGain?.disconnect(); } catch (_) {}
+        if (socket?.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: 'stop' }));
+          await new Promise(resolve => {
+            const fallback = setTimeout(resolve, 2000);
+            socket.addEventListener('close', () => { clearTimeout(fallback); resolve(); }, { once: true });
+          });
+        }
+
+        const transcriptText = getTranscriptText();
+        sessionStorage.setItem('classnote_current_lecture_transcript', transcriptText);
+        sessionStorage.setItem('classnote_original_transcript', transcriptText);
+        sessionStorage.setItem('classnote_recording_duration', String(seconds));
+
+        mediaStream?.getTracks().forEach(track => track.stop());
+        try { await audioContext?.close(); } catch (_) {}
+        try { socket?.close(); } catch (_) {}
+
+        if (!transcriptText.trim()) {
+          alert('No speech was detected in this recording session. Please speak into your microphone and try again.');
+          window.location.reload();
+          return;
+        }
+
+        // Show loading state
+        btnStop.disabled = true;
+        const originalHtml = btnStop.innerHTML;
+        btnStop.innerHTML = '<span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Synthesizing Academic Notes...</span>';
+
+        try {
+          const response = await fetch('http://127.0.0.1:8000/lectures/generate-content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ original_transcript: transcriptText })
+          });
+
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.detail || 'Content generation failed on FastAPI backend.');
+
+          sessionStorage.setItem('classnote_generated_lecture', JSON.stringify({
+            original_transcript: transcriptText,
+            generated_content: result.generated_content,
+            duration: seconds,
+            lecture: lecture
+          }));
+
+          window.location.href = '../pdf_preview_editor_classnote_ai/code.html';
+        } catch (error) {
+          console.error('Note generation error:', error);
+          btnStop.disabled = false;
+          btnStop.innerHTML = originalHtml;
+          alert('Lecture audio was captured, but notes could not be synthesized: ' + error.message + '\n\nPlease ensure your backend is running (`uvicorn main:app --reload`).');
+        }
+      }
+
+      btnPause?.addEventListener('click', pauseRecording);
+      btnResume?.addEventListener('click', resumeRecording);
+      btnStop?.addEventListener('click', stopRecording);
+
+      $('btn-copy-transcript')?.addEventListener('click', async () => {
+        const text = getTranscriptText();
+        if (!text) { alert('No transcript available to copy yet.'); return; }
+        try {
+          await navigator.clipboard.writeText(text);
+          alert('Transcript successfully copied to clipboard.');
+        } catch (_) {
+          alert('Clipboard write permission denied.');
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        if (!isStopped) {
+          if (timerInterval) clearInterval(timerInterval);
+          if (processor) processor.onaudioprocess = null;
+          mediaStream?.getTracks().forEach(track => track.stop());
+          try { socket?.close(); } catch (_) {}
+          try { audioContext?.close(); } catch (_) {}
+        }
+      });
+
+      // Start recording immediately
+      startRecording();
+    })();
+  </script>
+</body>
+</html>

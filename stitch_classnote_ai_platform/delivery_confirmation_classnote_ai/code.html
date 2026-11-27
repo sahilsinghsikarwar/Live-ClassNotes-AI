@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="web_dashboard" name="shell-type">
+  <title>ClassNote AI — Delivery Confirmation & Dispatch</title>
+
+  <!-- Prevent FOUC -->
+  <script>
+    (function() {
+      try {
+        const stored = localStorage.getItem('classnote_global_theme') || localStorage.getItem('classnote_theme');
+        if (stored === 'light') {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        } else if (stored === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+        } else {
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (prefersDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com" rel="preconnect">
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            heading: ["Plus Jakarta Sans", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Shared Design System -->
+  <link rel="stylesheet" href="../shared-theme/theme.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../shared-theme/theme.js"></script>
+
+  <script>
+    // Protect page with Supabase Auth Guard
+    document.documentElement.style.visibility = 'hidden';
+    document.addEventListener('DOMContentLoaded', () => {
+      window.ClassNoteAuth.protectPage({
+        onAuthenticated: ({ client, profile }) => {
+          window.__currentTeacherProfile = profile;
+        }
+      });
+    });
+  </script>
+</head>
+
+<body class="bg-background font-sans antialiased text-slate-800 dark:text-slate-100 min-h-screen flex flex-col">
+  <!-- Top Navigation Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 h-16 cn-header bg-white/90 dark:bg-[#0e1422]/90 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 transition-colors">
+    <div class="w-full h-full px-4 sm:px-8 flex items-center justify-between gap-4">
+      
+      <!-- Brand -->
+      <div class="flex items-center gap-3 min-w-[240px]">
+        <a class="flex items-center gap-3 group focus:outline-none" href="../teacher_dashboard_classnote_ai/code.html">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/25 transition-transform duration-200 group-hover:scale-105">
+            <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+          </div>
+          <span class="font-heading text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+            ClassNote <span class="text-indigo-600 dark:text-indigo-400">AI</span>
+          </span>
+        </a>
+        <div class="hidden lg:flex items-center ml-2 pl-3 border-l border-slate-200 dark:border-slate-800">
+          <span class="cn-badge cn-badge-primary">DISPATCH ENGINE</span>
+        </div>
+      </div>
+
+      <!-- Action Items & Teacher Identity -->
+      <div class="flex items-center gap-3">
+        <button id="theme-toggle-btn" class="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#131a2b] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white hover:border-indigo-500/40 transition-all cursor-pointer" title="Toggle dark or light mode" type="button" onclick="window.toggleClassNoteTheme()">
+          <span class="material-symbols-outlined text-[19px]">light_mode</span>
+        </button>
+
+        <div class="flex items-center gap-3 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
+          <div class="hidden sm:flex flex-col text-right">
+            <span class="font-heading text-xs font-bold text-slate-900 dark:text-white leading-tight" data-teacher-name>Faculty Member</span>
+            <span class="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 font-medium" data-teacher-department>Teacher Workspace</span>
+          </div>
+
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-indigo-500/20">
+            <span data-teacher-initial>T</span>
+          </div>
+
+          <button id="logout-btn" class="flex items-center justify-center w-9 h-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:bg-rose-500/15 transition-colors cursor-pointer" type="button" title="Sign out" aria-label="Sign out">
+            <span class="material-symbols-outlined text-[19px]">logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Left Sidebar Navigation -->
+  <aside class="fixed left-0 top-16 bottom-0 w-64 cn-sidebar bg-white dark:bg-[#0e1422] border-r border-slate-200 dark:border-slate-800 z-40 flex flex-col justify-between overflow-y-auto hidden md:flex transition-colors">
+    <div class="p-4 space-y-6">
+      <div>
+        <div class="font-mono text-[10px] font-semibold tracking-wider uppercase text-slate-400 dark:text-slate-500 px-3 mb-2">Navigation</div>
+        <nav class="space-y-1">
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#131a2b] font-heading text-sm font-medium transition-colors" href="../teacher_dashboard_classnote_ai/code.html">
+            <span class="material-symbols-outlined text-[20px]">grid_view</span>
+            <span>Dashboard</span>
+          </a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#131a2b] font-heading text-sm font-medium transition-colors" href="../new_lecture_academic_selection_classnote_ai/code.html">
+            <span class="material-symbols-outlined text-[20px]">add_circle</span>
+            <span>Start New Lecture</span>
+          </a>
+          <a class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-heading text-sm font-semibold border border-indigo-200/50 dark:border-indigo-500/20" href="code.html">
+            <span class="material-symbols-outlined text-[20px]">mark_email_read</span>
+            <span>Delivery Status</span>
+          </a>
+        </nav>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="md:pl-64 flex flex-col flex-1">
+    <main class="w-full pt-20 px-4 sm:px-8 py-6 flex-1 max-w-[1500px] mx-auto space-y-6">
+
+      <!-- STEPPER PROGRESS RIBBON -->
+      <section class="cn-card p-4 sm:p-5 rounded-2xl">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="cn-badge cn-badge-primary">STEP 4 OF 4</span>
+            <span class="text-slate-400 dark:text-slate-600">/</span>
+            <h1 class="font-heading text-base sm:text-lg font-bold text-slate-900 dark:text-white">Batch Delivery & Recipient Distribution</h1>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
+          <!-- Step 1 -->
+          <div class="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-[#0b101c] border border-slate-200 dark:border-slate-800 opacity-70">
+            <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white font-mono font-bold text-xs flex items-center justify-center">✓</div>
+            <div class="min-w-0">
+              <span class="font-heading text-xs font-semibold text-slate-700 dark:text-slate-300 block truncate">1. Academic Select</span>
+              <span class="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 block truncate">Completed</span>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-[#0b101c] border border-slate-200 dark:border-slate-800 opacity-70">
+            <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white font-mono font-bold text-xs flex items-center justify-center">✓</div>
+            <div class="min-w-0">
+              <span class="font-heading text-xs font-semibold text-slate-700 dark:text-slate-300 block truncate">2. Recording Studio</span>
+              <span class="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 block truncate">Completed</span>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="flex items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-[#0b101c] border border-slate-200 dark:border-slate-800 opacity-70">
+            <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white font-mono font-bold text-xs flex items-center justify-center">✓</div>
+            <div class="min-w-0">
+              <span class="font-heading text-xs font-semibold text-slate-700 dark:text-slate-300 block truncate">3. PDF Editor</span>
+              <span class="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 block truncate">PDF Generated</span>
+            </div>
+          </div>
+
+          <!-- Step 4: Active -->
+          <div class="flex items-center gap-2.5 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30">
+            <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs flex items-center justify-center">4</div>
+            <div class="min-w-0">
+              <span class="font-heading text-xs font-bold text-indigo-700 dark:text-indigo-300 block truncate">4. Email Delivery</span>
+              <span class="font-mono text-[10px] text-indigo-500 dark:text-indigo-400 block truncate">Active Stage</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HERO STATUS BANNER -->
+      <section class="cn-card p-6 sm:p-7 rounded-2xl relative overflow-hidden space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="cn-badge cn-badge-primary">SMTP ENGINE CONFIGURED</span>
+              <span class="text-slate-400">•</span>
+              <span id="target-lecture-badge" class="font-mono text-xs text-indigo-600 dark:text-indigo-400 font-semibold">Lecture Notes</span>
+            </div>
+            <h2 class="font-heading text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+              Dispatch Verified Notes to Student Inboxes
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+              Official academic delivery: Primary student in To, remaining selected cohort in CC. Signed with your faculty identity.
+            </p>
+          </div>
+
+          <!-- Send Action Button -->
+          <div class="shrink-0">
+            <button id="send-dispatch-btn" class="cn-btn cn-btn-primary py-3 px-6 text-sm font-bold shadow-lg shadow-indigo-500/25 flex items-center gap-2 cursor-pointer" type="button">
+              <span class="material-symbols-outlined text-[20px]">send</span>
+              <span>Send PDF to Selected Batches</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="classnote-delivery-message" class="text-xs font-mono font-semibold pt-2"></div>
+      </section>
+
+      <!-- METRIC CARDS -->
+      <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="cn-card p-5 rounded-2xl flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Total Enrolled Cohort</span>
+            <div id="metric-total" class="font-heading text-2xl font-bold text-slate-900 dark:text-white mt-1">0</div>
+            <span class="text-[11px] font-mono text-slate-400">Database students</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[24px]">groups</span>
+          </div>
+        </div>
+
+        <div class="cn-card p-5 rounded-2xl flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Queued for Dispatch</span>
+            <div id="metric-queued" class="font-heading text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">0</div>
+            <span class="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">Ready to receive PDF</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[24px]">mark_email_unread</span>
+          </div>
+        </div>
+
+        <div class="cn-card p-5 rounded-2xl flex items-center justify-between">
+          <div>
+            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Attached Document</span>
+            <div class="font-heading text-base font-bold text-slate-900 dark:text-white mt-1 truncate max-w-[200px]" id="metric-pdf-name">ClassNote.pdf</div>
+            <span class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold">IndexedDB Ready</span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[24px]">picture_as_pdf</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- DYNAMIC BATCH RECIPIENT CARDS -->
+      <section class="cn-card p-6 rounded-2xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-[22px]">checklist</span>
+            <h3 class="font-heading text-base font-bold text-slate-900 dark:text-white">Selected Lab Batches & Recipient Lists</h3>
+          </div>
+          <span class="text-xs font-mono text-slate-400">De-duplication Active</span>
+        </div>
+
+        <!-- Dynamic Container for Batches -->
+        <div id="batches-delivery-container" class="space-y-3">
+          <div class="p-6 text-center text-xs font-mono text-slate-500">
+            <span class="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin inline-block mr-2"></span>
+            Loading student roster from Supabase database…
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER NAVIGATION -->
+      <section class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+        <a class="cn-btn text-xs py-2.5 px-4 flex items-center gap-1.5" href="../teacher_dashboard_classnote_ai/code.html">
+          <span class="material-symbols-outlined text-[18px]">grid_view</span>
+          <span>Back to Dashboard</span>
+        </a>
+
+        <a class="cn-btn cn-btn-primary text-xs py-2.5 px-4 flex items-center gap-1.5" href="../new_lecture_academic_selection_classnote_ai/code.html">
+          <span>Start Another Lecture</span>
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </a>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const SUPABASE_URL = "https://wzdwnyxepryutqstsiso.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_tjdSpu-3rMRBLLG5e4YIqw_QVRynkgA";
+      const API_URL = "http://127.0.0.1:8000";
+
+      let activeBatches = [];
+      let recipientsByBatch = {};
+      let totalStudentsCount = 0;
+
+      function setStatus(msg, isError = false) {
+        const el = document.getElementById("classnote-delivery-message");
+        if (!el) return;
+        el.textContent = msg;
+        el.className = isError
+          ? "text-xs font-mono font-semibold pt-2 text-rose-500"
+          : "text-xs font-mono font-semibold pt-2 text-emerald-500";
+      }
+
+      function updateMetrics() {
+        const checkedBoxes = Array.from(document.querySelectorAll(".batch-delivery-cb:checked"));
+        const queuedEmails = new Set();
+
+        checkedBoxes.forEach(cb => {
+          const batchId = cb.dataset.batchId;
+          const list = recipientsByBatch[batchId] || [];
+          list.forEach(s => queuedEmails.add(s.email.toLowerCase()));
+        });
+
+        const totalEl = document.getElementById("metric-total");
+        const queuedEl = document.getElementById("metric-queued");
+
+        if (totalEl) totalEl.textContent = String(totalStudentsCount);
+        if (queuedEl) queuedEl.textContent = String(queuedEmails.size);
+      }
+
+      async function loadDeliveryRoster() {
+        // Read current lecture from session storage
+        const currentLecture = (() => {
+          try {
+            return JSON.parse(sessionStorage.getItem('classnote_current_lecture') || '{}');
+          } catch (_) { return {}; }
+        })();
+
+        const titleBadge = document.getElementById('target-lecture-badge');
+        if (titleBadge && currentLecture.lectureTitle) {
+          titleBadge.textContent = currentLecture.lectureTitle;
+        }
+
+        const client = window.classNoteSupabase || window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+        if (!client) throw new Error("Supabase client failed to load.");
+
+        // Query batches from Supabase
+        const { data: allBatches, error: bErr } = await client.from("batches").select("id, batch_name");
+        if (bErr) throw bErr;
+
+        // If the teacher selected specific batches in Step 1, filter for those!
+        // Otherwise default to first 3 AI-ML batches
+        let targetBatches = [];
+        if (Array.isArray(currentLecture.selectedBatches) && currentLecture.selectedBatches.length > 0) {
+          targetBatches = (allBatches || []).filter(b => currentLecture.selectedBatches.includes(b.batch_name));
+        }
+        if (!targetBatches.length) {
+          targetBatches = (allBatches || []).filter(b => b.batch_name.toLowerCase().startsWith('ai-ml batch')).slice(0, 3);
+        }
+
+        activeBatches = targetBatches;
+        recipientsByBatch = {};
+        totalStudentsCount = 0;
+
+        const container = document.getElementById("batches-delivery-container");
+        container.innerHTML = "";
+
+        for (const batch of targetBatches) {
+          // Query students enrolled in this batch
+          const { data: links, error: lErr } = await client
+            .from("batch_students")
+            .select("student_id, students(id, full_name, email)")
+            .eq("batch_id", batch.id);
+
+          const students = (links || [])
+            .map(row => row.students)
+            .filter(s => s && s.email)
+            .map(s => ({
+              id: s.id,
+              name: s.full_name || 'Student',
+              email: s.email.trim()
+            }));
+
+          // Deduplicate within batch
+          const uniqueStudents = [...new Map(students.map(s => [s.email.toLowerCase(), s])).values()];
+          recipientsByBatch[batch.id] = uniqueStudents;
+          totalStudentsCount += uniqueStudents.length;
+
+          // Render Batch Card
+          const card = document.createElement("div");
+          card.className = "p-4 rounded-xl bg-slate-50 dark:bg-[#0b101c] border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:border-indigo-500/40";
+          card.id = `batch-card-${batch.id}`;
+
+          card.innerHTML = `
+            <div class="flex items-center gap-3.5">
+              <input type="checkbox" checked class="batch-delivery-cb w-5 h-5 rounded text-indigo-600 accent-indigo-600 focus:ring-0 cursor-pointer" data-batch-id="${batch.id}">
+              <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs flex items-center justify-center">
+                ${batch.batch_name.match(/(\d+)\s*$/)?.[1] || '01'}
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-heading text-sm font-bold text-slate-900 dark:text-white">${batch.batch_name}</h4>
+                  <span id="batch-status-${batch.id}" class="cn-badge cn-badge-warning">Pending • Ready to Send</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${uniqueStudents.length} students enrolled with verified email</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <span class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">${uniqueStudents.length} Queued</span>
+            </div>
+          `;
+
+          container.appendChild(card);
+        }
+
+        // Attach checkbox change listeners
+        document.querySelectorAll(".batch-delivery-cb").forEach(cb => {
+          cb.addEventListener("change", updateMetrics);
+        });
+
+        updateMetrics();
+        setStatus(`Connected to Supabase • ${totalStudentsCount} total student recipients enrolled across ${targetBatches.length} batches.`);
+      }
+
+      function getStoredPdf() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open("classnote-delivery-db", 2);
+          request.onerror = () => reject(new Error("Could not open IndexedDB PDF storage."));
+          request.onsuccess = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains("files")) {
+              db.close();
+              reject(new Error("PDF storage store not found. Return to PDF Preview and click Continue."));
+              return;
+            }
+            const tx = db.transaction("files", "readonly");
+            const get = tx.objectStore("files").get("latest-pdf");
+            get.onsuccess = () => {
+              const record = get.result;
+              db.close();
+              if (!record || !(record.blob instanceof Blob) || record.blob.size < 1000) {
+                reject(new Error("Saved PDF is missing or empty. Please go back to Step 3 (PDF Editor) and export again."));
+                return;
+              }
+              resolve(record);
+            };
+            get.onerror = () => { db.close(); reject(tx.error); };
+          };
+        });
+      }
+
+      async function sendSelectedPdf() {
+        const btn = document.getElementById("send-dispatch-btn");
+        const checkedBoxes = Array.from(document.querySelectorAll(".batch-delivery-cb:checked"));
+        if (!checkedBoxes.length) {
+          setStatus("Please select at least one batch to dispatch.", true);
+          return;
+        }
+
+        // Gather all unique recipients
+        const allRecipients = new Map();
+        checkedBoxes.forEach(cb => {
+          const batchId = cb.dataset.batchId;
+          (recipientsByBatch[batchId] || []).forEach(s => allRecipients.set(s.email.toLowerCase(), s));
+        });
+
+        const studentList = [...allRecipients.values()];
+        if (!studentList.length) {
+          setStatus("No student email addresses found in the selected batches.", true);
+          return;
+        }
+
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Sending Emails via SMTP...</span>';
+
+        try {
+          const pdfRecord = await getStoredPdf();
+          const currentLecture = JSON.parse(sessionStorage.getItem('classnote_current_lecture') || '{}');
+          const teacherProfile = window.__currentTeacherProfile || JSON.parse(sessionStorage.getItem('classnote_teacher_profile') || '{}');
+          const teacherName = currentLecture.teacherName || teacherProfile.full_name || 'Faculty Member';
+          const lectureTitle = currentLecture.lectureTitle || 'Lecture Notes';
+
+          const form = new FormData();
+          form.append("recipients", studentList.map(s => s.email).join(","));
+          form.append("pdf", pdfRecord.blob, pdfRecord.filename || "ClassNote-Lecture-Notes.pdf");
+          form.append("teacher_name", teacherName);
+          form.append("lecture_title", lectureTitle);
+
+          const response = await fetch(`${API_URL}/email/send-pdf`, {
+            method: "POST",
+            body: form
+          });
+
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.detail || "Email delivery failed on backend.");
+
+          setStatus(`Success! PDF delivered to ${result.total_recipients} student recipients (Primary: ${result.primary_recipient}, CC: ${result.cc_recipients.length} students). Signed by ${teacherName}.`);
+
+          // Update UI badges
+          checkedBoxes.forEach(cb => {
+            const batchId = cb.dataset.batchId;
+            const badge = document.getElementById(`batch-status-${batchId}`);
+            if (badge) {
+              badge.textContent = "PDF Sent Successfully";
+              badge.className = "cn-badge cn-badge-success";
+            }
+          });
+
+          const queuedEl = document.getElementById("metric-queued");
+          if (queuedEl) queuedEl.textContent = "0";
+
+        } catch (error) {
+          console.error("Delivery error:", error);
+          setStatus(error.message, true);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        loadDeliveryRoster().catch(err => {
+          console.error("Delivery initialization error:", err);
+          setStatus("Could not load batch roster: " + err.message, true);
+        });
+
+        document.getElementById("send-dispatch-btn")?.addEventListener("click", sendSelectedPdf);
+      });
+    })();
+  </script>
+</body>
+</html>

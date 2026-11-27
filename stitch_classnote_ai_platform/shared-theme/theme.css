@@ -1,0 +1,362 @@
+/**
+ * ClassNote AI — Option 1: Deep Space Obsidian & Electric Indigo Design System
+ * Modern Linear / Vercel SaaS Aesthetic
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Brand Core Tokens */
+  --cn-brand-primary: #6366f1;
+  --cn-brand-primary-hover: #4f46e5;
+  --cn-brand-violet: #8b5cf6;
+  --cn-brand-cyan: #06b6d4;
+
+  /* Typography */
+  --cn-font-heading: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --cn-font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --cn-font-mono: 'JetBrains Mono', monospace;
+
+  /* Geometry & Motion */
+  --cn-radius-sm: 8px;
+  --cn-radius-md: 12px;
+  --cn-radius-lg: 16px;
+  --cn-radius-xl: 24px;
+  --cn-radius-full: 9999px;
+  --cn-transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   DARK THEME: Deep Space Obsidian & Electric Indigo
+   ========================================================================== */
+html.dark,
+:root:not(.light) {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --cn-bg: #080c14;
+  --cn-bg-gradient: radial-gradient(ellipse at 78% 4%, rgba(99, 102, 241, 0.14), transparent 45%),
+                    radial-gradient(ellipse at 12% 92%, rgba(6, 182, 212, 0.08), transparent 42%),
+                    #080c14;
+  --cn-sidebar: #0b101b;
+  --cn-header: rgba(11, 16, 27, 0.88);
+  --cn-panel: #111726;
+  --cn-panel-hover: #161f33;
+  --cn-panel-elevated: #182238;
+  --cn-panel-card: #111726;
+  --cn-panel-inner: #0b0f19;
+
+  /* Text & Foreground */
+  --cn-text: #e2e8f0;
+  --cn-text-heading: #f8fafc;
+  --cn-text-muted: #94a3b8;
+  --cn-text-subtle: #64748b;
+
+  /* Borders & Dividers */
+  --cn-border: rgba(148, 163, 184, 0.12);
+  --cn-border-hover: rgba(99, 102, 241, 0.4);
+  --cn-border-focus: #6366f1;
+
+  /* Accents */
+  --cn-accent: #6366f1;
+  --cn-accent-hover: #818cf8;
+  --cn-accent-light: #a5b4fc;
+  --cn-accent-soft: rgba(99, 102, 241, 0.14);
+  --cn-accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #06b6d4 100%);
+  --cn-accent-glow: 0 0 25px rgba(99, 102, 241, 0.35);
+
+  /* Functional Status */
+  --cn-success: #10b981;
+  --cn-success-soft: rgba(16, 185, 129, 0.14);
+  --cn-warning: #f59e0b;
+  --cn-warning-soft: rgba(245, 158, 11, 0.14);
+  --cn-danger: #f43f5e;
+  --cn-danger-soft: rgba(244, 63, 94, 0.14);
+  --cn-info: #06b6d4;
+  --cn-info-soft: rgba(6, 182, 212, 0.14);
+
+  /* Shadows */
+  --cn-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --cn-shadow-md: 0 8px 26px -4px rgba(0, 0, 0, 0.45);
+  --cn-shadow-lg: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+  --cn-shadow-glow: 0 10px 30px -4px rgba(99, 102, 241, 0.3);
+}
+
+/* ==========================================================================
+   LIGHT THEME: Crisp Snow White & Deep Royal Indigo
+   ========================================================================== */
+html.light,
+html:not(.dark) {
+  color-scheme: light;
+
+  /* Surfaces */
+  --cn-bg: #f8fafc;
+  --cn-bg-gradient: radial-gradient(ellipse at 80% 0%, rgba(99, 102, 241, 0.05), transparent 52%),
+                    radial-gradient(ellipse at 10% 100%, rgba(6, 182, 212, 0.04), transparent 48%),
+                    #f8fafc;
+  --cn-sidebar: #ffffff;
+  --cn-header: rgba(255, 255, 255, 0.92);
+  --cn-panel: #ffffff;
+  --cn-panel-hover: #f1f5f9;
+  --cn-panel-elevated: #ffffff;
+  --cn-panel-card: #ffffff;
+  --cn-panel-inner: #f8fafc;
+
+  /* Text & Foreground */
+  --cn-text: #334155;
+  --cn-text-heading: #0f172a;
+  --cn-text-muted: #64748b;
+  --cn-text-subtle: #94a3b8;
+
+  /* Borders & Dividers */
+  --cn-border: #e2e8f0;
+  --cn-border-hover: #cbd5e1;
+  --cn-border-focus: #4f46e5;
+
+  /* Accents */
+  --cn-accent: #4f46e5;
+  --cn-accent-hover: #4338ca;
+  --cn-accent-light: #6366f1;
+  --cn-accent-soft: rgba(79, 70, 229, 0.08);
+  --cn-accent-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #0284c7 100%);
+  --cn-accent-glow: 0 0 20px rgba(79, 70, 229, 0.2);
+
+  /* Functional Status */
+  --cn-success: #059669;
+  --cn-success-soft: rgba(5, 150, 105, 0.1);
+  --cn-warning: #d97706;
+  --cn-warning-soft: rgba(217, 119, 6, 0.1);
+  --cn-danger: #e11d48;
+  --cn-danger-soft: rgba(225, 29, 72, 0.1);
+  --cn-info: #0284c7;
+  --cn-info-soft: rgba(2, 132, 199, 0.1);
+
+  /* Shadows */
+  --cn-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --cn-shadow-md: 0 6px 20px -3px rgba(15, 23, 42, 0.07);
+  --cn-shadow-lg: 0 18px 40px -8px rgba(15, 23, 42, 0.08);
+  --cn-shadow-glow: 0 8px 26px -4px rgba(79, 70, 229, 0.2);
+}
+
+/* ==========================================================================
+   GLOBAL COMPONENT UTILITIES
+   ========================================================================== */
+html {
+  font-family: var(--cn-font-body);
+  background-color: var(--cn-bg);
+  color: var(--cn-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--cn-bg-gradient) !important;
+  color: var(--cn-text) !important;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--cn-font-heading);
+  color: var(--cn-text-heading);
+  letter-spacing: -0.025em;
+}
+
+/* Card Container */
+.cn-card {
+  background: var(--cn-panel) !important;
+  color: var(--cn-text) !important;
+  border: 1px solid var(--cn-border) !important;
+  border-radius: var(--cn-radius-lg) !important;
+  box-shadow: var(--cn-shadow-md) !important;
+  transition: var(--cn-transition);
+}
+
+.cn-card:hover {
+  border-color: var(--cn-border-hover) !important;
+}
+
+/* Unified Buttons */
+.cn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  border-radius: var(--cn-radius-md);
+  font-family: var(--cn-font-heading);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: var(--cn-transition);
+  border: 1px solid var(--cn-border);
+  background: var(--cn-panel);
+  color: var(--cn-text);
+  text-decoration: none;
+  user-select: none;
+}
+
+.cn-btn:hover:not(:disabled) {
+  background: var(--cn-panel-hover);
+  border-color: var(--cn-border-hover);
+  color: var(--cn-text-heading);
+}
+
+.cn-btn-primary {
+  background: var(--cn-accent-gradient) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  box-shadow: var(--cn-shadow-glow) !important;
+}
+
+.cn-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -4px rgba(99, 102, 241, 0.45) !important;
+}
+
+.cn-btn-secondary {
+  background: var(--cn-accent-soft) !important;
+  color: var(--cn-accent) !important;
+  border-color: transparent !important;
+}
+
+.cn-btn-secondary:hover:not(:disabled) {
+  background: var(--cn-accent) !important;
+  color: #ffffff !important;
+}
+
+.cn-btn-danger {
+  background: var(--cn-danger) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.cn-btn-danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.cn-btn:disabled,
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+/* Inputs & Form Elements */
+.cn-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--cn-radius-md);
+  border: 1px solid var(--cn-border);
+  background: var(--cn-panel-inner);
+  color: var(--cn-text-heading);
+  font-family: var(--cn-font-body);
+  font-size: 0.875rem;
+  outline: none;
+  transition: var(--cn-transition);
+}
+
+.cn-input:focus {
+  border-color: var(--cn-accent);
+  box-shadow: 0 0 0 3px var(--cn-accent-soft);
+}
+
+.cn-input::placeholder {
+  color: var(--cn-text-subtle);
+}
+
+/* Badges */
+.cn-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--cn-radius-full);
+  font-family: var(--cn-font-mono);
+  font-size: 0.725rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.cn-badge-primary {
+  background: var(--cn-accent-soft);
+  color: var(--cn-accent);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.cn-badge-success {
+  background: var(--cn-success-soft);
+  color: var(--cn-success);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.cn-badge-warning {
+  background: var(--cn-warning-soft);
+  color: var(--cn-warning);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.cn-badge-danger {
+  background: var(--cn-danger-soft);
+  color: var(--cn-danger);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+/* Academic Selection Buttons */
+.academic-choice {
+  padding: 0.65rem 1rem;
+  border-radius: var(--cn-radius-md);
+  background: var(--cn-panel-inner);
+  color: var(--cn-text-muted);
+  border: 1px solid var(--cn-border);
+  font-family: var(--cn-font-body);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: var(--cn-transition);
+  cursor: pointer;
+  text-align: left;
+}
+
+.academic-choice:hover {
+  border-color: var(--cn-accent);
+  color: var(--cn-text-heading);
+  background: var(--cn-panel-hover);
+  transform: translateY(-1px);
+}
+
+.academic-choice.is-selected {
+  background: var(--cn-accent-soft);
+  color: var(--cn-accent);
+  border-color: var(--cn-accent);
+  box-shadow: 0 0 0 1px var(--cn-accent), 0 4px 14px rgba(99, 102, 241, 0.2);
+  font-weight: 600;
+}
+
+/* Smooth Transitions for Theme Switcher */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *:before,
+html.theme-transition *:after {
+  transition: background-color 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.26s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Accessibility */
+:focus-visible {
+  outline: 2px solid var(--cn-accent) !important;
+  outline-offset: 3px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

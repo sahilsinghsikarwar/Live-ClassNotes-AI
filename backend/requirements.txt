@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+websockets
+python-multipart
+requests
+google-genai
+python-dotenv
+supabase
+pydantic
